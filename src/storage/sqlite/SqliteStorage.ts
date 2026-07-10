@@ -34,6 +34,22 @@ export class SqliteStorage implements Storage {
     `).run(run);
   }
 
+  public async updateRun(run: RunRecord): Promise<void> {
+    this.db.prepare(`
+      UPDATE runs
+      SET name = @name,
+          status = @status,
+          started_at = @startedAt,
+          finished_at = @finishedAt,
+          output_file = @outputFile
+      WHERE id = @id
+    `).run(run);
+  }
+
+  public async getRuns(): Promise<RunRecord[]> {
+    return this.db.prepare('SELECT * FROM runs').all() as RunRecord[];
+  }
+
   public async insertTest(test: TestRecord): Promise<void> {
     this.db.prepare(`
       INSERT INTO tests (id, run_id, title, status, duration_ms, browser, project, tags, started_at, finished_at)
@@ -61,11 +77,19 @@ export class SqliteStorage implements Storage {
     });
   }
 
+  public async getTests(): Promise<TestRecord[]> {
+    return this.db.prepare('SELECT * FROM tests').all() as TestRecord[];
+  }
+
   public async insertAction(action: ActionRecord): Promise<void> {
     this.db.prepare(`
       INSERT INTO actions (id, test_id, name, status, started_at, finished_at)
       VALUES (@id, @testId, @name, @status, @startedAt, @finishedAt)
     `).run(action);
+  }
+
+  public async getActions(): Promise<ActionRecord[]> {
+    return this.db.prepare('SELECT * FROM actions').all() as ActionRecord[];
   }
 
   public async insertRequest(request: RequestRecord): Promise<void> {
@@ -75,11 +99,19 @@ export class SqliteStorage implements Storage {
     `).run(request);
   }
 
+  public async getRequests(): Promise<RequestRecord[]> {
+    return this.db.prepare('SELECT * FROM requests').all() as RequestRecord[];
+  }
+
   public async insertHeader(header: HeaderRecord): Promise<void> {
     this.db.prepare(`
       INSERT INTO headers (id, request_id, name, value)
       VALUES (@id, @requestId, @name, @value)
     `).run(header);
+  }
+
+  public async getHeaders(): Promise<HeaderRecord[]> {
+    return this.db.prepare('SELECT * FROM headers').all() as HeaderRecord[];
   }
 
   public async insertBodyChunk(chunk: BodyChunkRecord): Promise<void> {
@@ -89,11 +121,19 @@ export class SqliteStorage implements Storage {
     `).run(chunk);
   }
 
+  public async getBodyChunks(): Promise<BodyChunkRecord[]> {
+    return this.db.prepare('SELECT * FROM body_chunks').all() as BodyChunkRecord[];
+  }
+
   public async insertConsole(entry: ConsoleRecord): Promise<void> {
     this.db.prepare(`
       INSERT INTO console_entries (id, test_id, message, type, timestamp)
       VALUES (@id, @testId, @message, @type, @timestamp)
     `).run(entry);
+  }
+
+  public async getConsoleEntries(): Promise<ConsoleRecord[]> {
+    return this.db.prepare('SELECT * FROM console_entries').all() as ConsoleRecord[];
   }
 
   public async insertImage(image: ImageRecord): Promise<void> {
@@ -103,11 +143,19 @@ export class SqliteStorage implements Storage {
     `).run(image);
   }
 
+  public async getImages(): Promise<ImageRecord[]> {
+    return this.db.prepare('SELECT * FROM images').all() as ImageRecord[];
+  }
+
   public async insertMetadata(metadata: MetadataRecord): Promise<void> {
     this.db.prepare(`
       INSERT INTO metadata (id, test_id, key, value)
       VALUES (@id, @testId, @key, @value)
     `).run(metadata);
+  }
+
+  public async getMetadata(): Promise<MetadataRecord[]> {
+    return this.db.prepare('SELECT * FROM metadata').all() as MetadataRecord[];
   }
 
   public async close(): Promise<void> {

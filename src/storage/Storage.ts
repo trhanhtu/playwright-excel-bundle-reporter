@@ -74,14 +74,24 @@ export interface MetadataRecord {
 
 export interface Storage {
   insertRun(run: RunRecord): Promise<void>;
+  updateRun(run: RunRecord): Promise<void>;
+  getRuns(): Promise<RunRecord[]>;
   insertTest(test: TestRecord): Promise<void>;
   updateTest(test: TestRecord): Promise<void>;
+  getTests(): Promise<TestRecord[]>;
   insertAction(action: ActionRecord): Promise<void>;
+  getActions(): Promise<ActionRecord[]>;
   insertRequest(request: RequestRecord): Promise<void>;
+  getRequests(): Promise<RequestRecord[]>;
   insertHeader(header: HeaderRecord): Promise<void>;
+  getHeaders(): Promise<HeaderRecord[]>;
   insertBodyChunk(chunk: BodyChunkRecord): Promise<void>;
+  getBodyChunks(): Promise<BodyChunkRecord[]>;
   insertConsole(entry: ConsoleRecord): Promise<void>;
+  getConsoleEntries(): Promise<ConsoleRecord[]>;
   insertImage(image: ImageRecord): Promise<void>;
+  getImages(): Promise<ImageRecord[]>;
   insertMetadata(metadata: MetadataRecord): Promise<void>;
+  getMetadata(): Promise<MetadataRecord[]>;
   close(): Promise<void>;
 }

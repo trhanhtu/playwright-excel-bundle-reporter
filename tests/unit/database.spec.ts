@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "vitest";
 import { Database } from '../../src/database/Database.js';
 
 test('Database can be instantiated', () => {

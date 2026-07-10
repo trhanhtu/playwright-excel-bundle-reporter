@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "vitest";
 import { Workbook } from '../../src/excel/Workbook.js';
 
 test('Workbook can be instantiated', () => {

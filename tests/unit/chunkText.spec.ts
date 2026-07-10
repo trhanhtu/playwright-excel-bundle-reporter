@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "vitest";
 import { chunkText } from '../../src/utils/chunkText.js';
 
 test('chunkText splits content into chunks', () => {

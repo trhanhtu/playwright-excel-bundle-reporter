@@ -26,6 +26,19 @@ export class MemoryStorage implements Storage {
     this.runs.push(run);
   }
 
+  public async updateRun(run: RunRecord): Promise<void> {
+    const index = this.runs.findIndex((item) => item.id === run.id);
+    if (index >= 0) {
+      this.runs[index] = run;
+    } else {
+      this.runs.push(run);
+    }
+  }
+
+  public async getRuns(): Promise<RunRecord[]> {
+    return [...this.runs];
+  }
+
   public async insertTest(test: TestRecord): Promise<void> {
     this.tests.push(test);
   }
@@ -39,32 +52,64 @@ export class MemoryStorage implements Storage {
     }
   }
 
+  public async getTests(): Promise<TestRecord[]> {
+    return [...this.tests];
+  }
+
   public async insertAction(action: ActionRecord): Promise<void> {
     this.actions.push(action);
+  }
+
+  public async getActions(): Promise<ActionRecord[]> {
+    return [...this.actions];
   }
 
   public async insertRequest(request: RequestRecord): Promise<void> {
     this.requests.push(request);
   }
 
+  public async getRequests(): Promise<RequestRecord[]> {
+    return [...this.requests];
+  }
+
   public async insertHeader(header: HeaderRecord): Promise<void> {
     this.headers.push(header);
+  }
+
+  public async getHeaders(): Promise<HeaderRecord[]> {
+    return [...this.headers];
   }
 
   public async insertBodyChunk(chunk: BodyChunkRecord): Promise<void> {
     this.bodyChunks.push(chunk);
   }
 
+  public async getBodyChunks(): Promise<BodyChunkRecord[]> {
+    return [...this.bodyChunks];
+  }
+
   public async insertConsole(entry: ConsoleRecord): Promise<void> {
     this.consoleEntries.push(entry);
+  }
+
+  public async getConsoleEntries(): Promise<ConsoleRecord[]> {
+    return [...this.consoleEntries];
   }
 
   public async insertImage(image: ImageRecord): Promise<void> {
     this.images.push(image);
   }
 
+  public async getImages(): Promise<ImageRecord[]> {
+    return [...this.images];
+  }
+
   public async insertMetadata(metadata: MetadataRecord): Promise<void> {
     this.metadata.push(metadata);
+  }
+
+  public async getMetadata(): Promise<MetadataRecord[]> {
+    return [...this.metadata];
   }
 
   public async close(): Promise<void> {
