@@ -1,26 +1,19 @@
 {
   "name": "playwright-excel-reporter",
   "version": "0.1.0",
-  "private": true,
   "description": "Playwright Excel Reporter scaffold",
   "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    }
+    ".": "./dist/index.js"
   },
   "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
+    "dist"
   ],
   "scripts": {
     "build": "tsup",
+    "prepare": "npm run build",
     "dev": "tsup --watch",
     "clean": "node scripts/clean.mts",
     "lint": "eslint .",
