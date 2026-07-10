@@ -1,3 +1,3 @@
 export interface CompilerContext {
-  outputFile?: string;
+  outputFile: string;
 }

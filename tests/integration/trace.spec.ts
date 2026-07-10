@@ -1,9 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { TraceParser } from '../../src/trace/TraceParser';
+import { test, expect } from '@playwright/test';
+import { TraceParser } from '../../src/trace/TraceParser.js';
 
-describe('TraceParser', () => {
-  it('can be instantiated', () => {
-    const parser = new TraceParser();
-    expect(parser).toBeInstanceOf(TraceParser);
-  });
+test('TraceParser can be instantiated', () => {
+  const parser = new TraceParser();
+  expect(parser).toBeInstanceOf(TraceParser);
 });

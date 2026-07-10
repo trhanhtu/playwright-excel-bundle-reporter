@@ -1,9 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { Database } from '../../src/database/Database';
+import { test, expect } from '@playwright/test';
+import { Database } from '../../src/database/Database.js';
 
-describe('Database', () => {
-  it('can be instantiated', () => {
-    const database = new Database();
-    expect(database).toBeInstanceOf(Database);
-  });
+test('Database can be instantiated', () => {
+  const database = new Database();
+  expect(database).toBeInstanceOf(Database);
 });

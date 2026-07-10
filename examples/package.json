@@ -1,7 +1,11 @@
 {
   "name": "playwright-excel-reporter-example",
   "private": true,
+  "type": "module",
   "scripts": {
     "test": "playwright test"
+  },
+  "dependencies": {
+    "playwright-excel-reporter": "file:.."
   }
 }

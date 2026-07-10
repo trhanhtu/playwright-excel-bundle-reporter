@@ -1,3 +1,3 @@
 export interface CompilerOptions {
-  outputFile?: string;
+  outputFile: string;
 }
