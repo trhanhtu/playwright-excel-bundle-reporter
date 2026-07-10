@@ -1,0 +1,7 @@
+{
+  "name": "playwright-excel-reporter-example",
+  "private": true,
+  "scripts": {
+    "test": "playwright test"
+  }
+}
