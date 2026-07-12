@@ -1,7 +1,9 @@
-import { test, expect } from "vitest";
-import { Database } from '../../src/database/Database.js';
+import { test, expect } from 'vitest';
+import { createEmptyTraceRecord } from '../../src/trace/TraceRecord.js';
 
-test('Database can be instantiated', () => {
-  const database = new Database();
-  expect(database).toBeInstanceOf(Database);
+test('createEmptyTraceRecord returns a default TraceRecord', () => {
+  const record = createEmptyTraceRecord();
+  expect(record.recordId).toBe('');
+  expect(record.eventType).toBe('test');
+  expect(record.timestamp).toBe('');
 });

@@ -1,128 +1,265 @@
-import type { Storage, RunRecord, TestRecord, ActionRecord, RequestRecord, HeaderRecord, BodyChunkRecord, ConsoleRecord, ImageRecord, MetadataRecord } from '../storage/Storage.js';
-import { randomUUID } from 'node:crypto';
-import type { ReporterOptions } from './ReporterOptions.js';
-import { MemoryStorage } from '../storage/memory/MemoryStorage.js';
-import { Compiler } from '../compiler/Compiler.js';
+import type {
+  ActionCategory,
+  ActionId,
+  ConsoleId,
+  ImageId,
+  RunId,
+  TestId,
+  TraceRecord,
+} from '../trace/TraceRecord.js';
+import type { TraceStorage } from '../trace/TraceStorage.js';
+import { MemoryTraceStorage } from '../trace/MemoryTraceStorage.js';
+import { ExcelCompiler } from '../compiler/ExcelCompiler.js';
+import type {
+  FullConfig,
+  FullResult,
+  Reporter,
+  Suite,
+  TestCase,
+  TestError,
+  TestResult,
+  TestStep,
+  WorkerInfo,
+} from '@playwright/test/reporter';
+import { generateId } from '../utils/generateUUID.js';
 
-export class ExcelReporter {
-  private currentRunId: string | undefined;
-  private currentTestId: string | undefined;
-  private readonly storage: Storage;
+export interface ExcelReporterOptions {
+  outputFile?: string;
+  storage?: TraceStorage;
+}
+
+export class ExcelReporter implements Reporter {
+  private currentRunId: RunId | undefined;
+  private currentRunName: string | undefined;
+  private readonly storage: TraceStorage;
   private readonly outputFile: string | undefined;
+  private readonly testStepMap: WeakMap<TestStep, ActionId> = new WeakMap();
 
-  constructor(options?: ReporterOptions | Storage) {
-    if (options && typeof options === 'object' && 'insertRun' in options) {
-      this.storage = options;
-      this.outputFile = undefined;
-      return;
-    }
-
-    const reporterOptions = options as ReporterOptions | undefined;
-    this.storage = reporterOptions?.storage ?? new MemoryStorage();
-    this.outputFile = reporterOptions?.outputFile;
+  constructor(options?: ExcelReporterOptions) {
+    this.storage = options?.storage ?? new MemoryTraceStorage();
+    this.outputFile = options?.outputFile;
   }
 
-  public async onBegin(): Promise<void> {
-    this.currentRunId = randomUUID();
-    const run: RunRecord = {
-      id: this.currentRunId,
-      name: 'playwright-run',
-      status: 'running',
-      startedAt: new Date().toISOString(),
-    };
-
-    if (this.outputFile) {
-      run.outputFile = this.outputFile;
+  public async onBegin(config: FullConfig, suite: Suite): Promise<void> {
+    this.currentRunId = generateId<RunId>();
+    this.currentRunName =
+      suite.titlePath().join(' > ') || suite.title || 'playwright-run';
+    if (config.projects?.length) {
+      this.currentRunName = `${this.currentRunName} (${config.projects.map((p) => p.name).join(', ')})`;
     }
 
-    await this.storage.insertRun(run);
-  }
-
-  public async onTestBegin(title: string): Promise<void> {
-    this.currentTestId = randomUUID();
-    await this.storage.insertTest({
-      id: this.currentTestId,
-      runId: this.currentRunId ?? randomUUID(),
-      title,
-      status: 'running',
-      durationMs: 0,
+    const timestamp = new Date().toISOString();
+    await this.storage.appendTraceRecord({
+      recordId: generateId(),
+      runId: this.currentRunId,
+      testId: '' as TestId,
+      eventType: 'test',
+      timestamp,
+      runName: this.currentRunName,
+      runStatus: 'running',
     });
   }
 
-  public async onTestEnd(title: string, status: string): Promise<void> {
-    if (!this.currentTestId) {
+  public async onTestBegin(test: TestCase, result: TestResult): Promise<void> {
+    if (!this.currentRunId) {
       return;
     }
-
-    await this.storage.updateTest({
-      id: this.currentTestId,
-      runId: this.currentRunId ?? randomUUID(),
-      title,
-      status,
-      durationMs: 0,
+    const testId = this.getTestId(test);
+    await this.storage.appendTraceRecord({
+      recordId: generateId(),
+      runId: this.currentRunId,
+      testId,
+      eventType: 'test',
+      timestamp: result.startTime?.toISOString() ?? new Date().toISOString(),
+      testTitle: test.title,
+      testStatus: '',
+      retry: result.retry,
+      workerIndex: result.workerIndex,
+      project: test.parent?.project()?.name,
     });
   }
 
-  public async onAction(name: string): Promise<void> {
-    if (!this.currentTestId) {
-      return;
-    }
-
-    await this.storage.insertAction({
-      id: randomUUID(),
-      testId: this.currentTestId,
-      name,
-      status: 'pending',
-    });
-  }
-
-  public async onRequest(request: RequestRecord): Promise<void> {
-    await this.storage.insertRequest(request);
-  }
-
-  public async onHeader(header: HeaderRecord): Promise<void> {
-    await this.storage.insertHeader(header);
-  }
-
-  public async onBodyChunk(chunk: BodyChunkRecord): Promise<void> {
-    await this.storage.insertBodyChunk(chunk);
-  }
-
-  public async onConsole(entry: ConsoleRecord): Promise<void> {
-    await this.storage.insertConsole(entry);
-  }
-
-  public async onImage(image: ImageRecord): Promise<void> {
-    await this.storage.insertImage(image);
-  }
-
-  public async onMetadata(metadata: MetadataRecord): Promise<void> {
-    await this.storage.insertMetadata(metadata);
-  }
-
-  public async onEnd(): Promise<void> {
+  public async onTestEnd(test: TestCase, result: TestResult): Promise<void> {
     if (!this.currentRunId) {
       return;
     }
 
-    const completedRun: RunRecord = {
-      id: this.currentRunId,
-      name: 'playwright-run',
-      status: 'completed',
-      startedAt: new Date().toISOString(),
-      finishedAt: new Date().toISOString(),
-    };
+    const projectName = test.parent?.project()?.name || 'project name not found';
+    const testId = this.getTestId(test);
+    const startTime = result.startTime || new Date();
+    const finishedAt = new Date(startTime.getTime() + result.duration).toISOString();
 
-    if (this.outputFile) {
-      completedRun.outputFile = this.outputFile;
+    await this.storage.appendTraceRecord({
+      recordId: generateId(),
+      runId: this.currentRunId,
+      testId,
+      eventType: 'test',
+      timestamp: finishedAt,
+      durationMs: result.duration,
+      testTitle: test.title,
+      testStatus: this.toRunStatus(result.status),
+      testFile: test.location?.file,
+      testLine: test.location?.line,
+      retry: result.retry,
+      workerIndex: result.workerIndex,
+      browser: projectName,
+      project: projectName,
+      errorMessage: result.error?.message,
+      stack: result.error?.stack,
+    });
+
+    // Capture screenshot attachments
+    if (result.attachments) {
+      for (const attachment of result.attachments) {
+        if (
+          attachment.name === 'screenshot' ||
+          attachment.contentType?.startsWith('image/')
+        ) {
+          await this.storage.appendTraceRecord({
+            recordId: generateId(),
+            runId: this.currentRunId,
+            testId,
+            eventType: 'image',
+            timestamp: finishedAt,
+            imageId: generateId<ImageId>(),
+            imagePath: attachment.path || '',
+          });
+        }
+      }
+    }
+  }
+
+  public async onStepBegin(
+    test: TestCase,
+    result: TestResult,
+    step: TestStep,
+  ): Promise<void> {
+    const actionId = generateId<ActionId>();
+    this.testStepMap.set(step, actionId);
+    const testId = this.getTestId(test);
+
+    await this.storage.appendTraceRecord({
+      recordId: actionId,
+      runId: this.currentRunId ?? ('' as RunId),
+      testId,
+      eventType: 'action',
+      timestamp: step.startTime.toISOString(),
+      actionId,
+      actionName: step.title,
+      actionCategory: step.category as ActionCategory,
+      actionStatus: 'running',
+    });
+  }
+
+  public async onStepEnd(
+    test: TestCase,
+    result: TestResult,
+    step: TestStep,
+  ): Promise<void> {
+    const actionId = this.testStepMap.get(step) ?? generateId<ActionId>();
+    const actionStatus = step.error ? 'failed' : 'completed';
+
+    await this.storage.updateTraceRecord(actionId, {
+      actionName: step.title,
+      actionCategory: step.category as ActionCategory,
+      actionStatus,
+      durationMs: step.duration,
+      errorMessage: step.error?.message,
+      stack: step.error?.stack,
+    });
+  }
+
+  public async onStdOut(
+    chunk: string | Buffer,
+    test: void | TestCase,
+    result: void | TestResult,
+  ): Promise<void> {
+    if (!test || !this.currentRunId) {
+      return;
+    }
+    await this.storage.appendTraceRecord({
+      recordId: generateId(),
+      runId: this.currentRunId,
+      testId: this.getTestId(test),
+      eventType: 'console',
+      timestamp: new Date().toISOString(),
+      consoleId: generateId<ConsoleId>(),
+      consoleType: 'stdout',
+      consoleMessage: typeof chunk === 'string' ? chunk : chunk.toString('utf8'),
+    });
+  }
+
+  public async onStdErr(
+    chunk: string | Buffer,
+    test: void | TestCase,
+    result: void | TestResult,
+  ): Promise<void> {
+    if (!test || !this.currentRunId) {
+      return;
+    }
+    await this.storage.appendTraceRecord({
+      recordId: generateId(),
+      runId: this.currentRunId,
+      testId: this.getTestId(test),
+      eventType: 'console',
+      timestamp: new Date().toISOString(),
+      consoleId: generateId<ConsoleId>(),
+      consoleType: 'stderr',
+      consoleMessage: typeof chunk === 'string' ? chunk : chunk.toString('utf8'),
+    });
+  }
+
+  public async onError(
+    error: TestError,
+    workerInfo?: WorkerInfo,
+  ): Promise<void> {
+    await this.storage.appendTraceRecord({
+      recordId: generateId(),
+      runId: this.currentRunId ?? ('' as RunId),
+      testId: '' as TestId,
+      eventType: 'error',
+      timestamp: new Date().toISOString(),
+      workerIndex: workerInfo?.workerIndex,
+      errorMessage: error.message,
+      stack: error.stack,
+    });
+  }
+
+  public async onEnd(result: FullResult): Promise<void> {
+    if (!this.currentRunId) {
+      return;
     }
 
-    await this.storage.updateRun(completedRun);
+    const finishedAt = new Date().toISOString();
+    await this.storage.appendTraceRecord({
+      recordId: generateId(),
+      runId: this.currentRunId,
+      testId: '' as TestId,
+      eventType: 'test',
+      timestamp: finishedAt,
+      runName: this.currentRunName ?? 'playwright-run',
+      runStatus: result.status as TraceRecord['runStatus'],
+    });
 
     if (this.outputFile) {
-      await new Compiler(this.storage).compile({ outputFile: this.outputFile });
+      await new ExcelCompiler(this.storage).compile({ outputFile: this.outputFile });
     }
+  }
 
-    await this.storage.close();
+  private getTestId(test: TestCase): TestId {
+    return (test.id ?? test.title) as TestId;
+  }
+
+  private toRunStatus(status: string): TraceRecord['testStatus'] {
+    if (
+      status === 'passed' ||
+      status === 'failed' ||
+      status === 'timedOut' ||
+      status === 'skipped' ||
+      status === 'interrupted'
+    ) {
+      return status;
+    }
+    return '';
   }
 }

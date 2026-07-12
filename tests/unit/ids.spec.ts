@@ -1,7 +1,14 @@
-import { test, expect } from "vitest";
-import { IdGenerator } from '../../src/database/ids/IdGenerator.js';
+import { test, expect } from 'vitest';
+import { generateId } from '../../src/utils/generateUUID.js';
+import type { RunId } from '../../src/types/ids.js';
 
-test('IdGenerator creates ids', () => {
-  const id = IdGenerator.nextId();
-  expect(id.startsWith('id-')).toBe(true);
+test('generateId creates a non-empty UUID-like string', () => {
+  const id = generateId();
+  expect(typeof id).toBe('string');
+  expect(id.length).toBeGreaterThan(0);
+});
+
+test('generateId supports branded types', () => {
+  const runId = generateId<RunId>();
+  expect(typeof runId).toBe('string');
 });

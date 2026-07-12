@@ -1,8 +1,10 @@
 import type { ReporterOptions } from './ReporterOptions.js';
 import { ExcelReporter } from './ExcelReporter.js';
-import { MemoryStorage } from '../storage/memory/MemoryStorage.js';
+import { MemoryTraceStorage } from '../trace/MemoryTraceStorage.js';
 
 export function createReporter(options: ReporterOptions = {}): ExcelReporter {
-  const storage = options.storage ?? new MemoryStorage();
-  return new ExcelReporter(storage);
+  return new ExcelReporter({
+    ...options,
+    storage: options.storage ?? new MemoryTraceStorage(),
+  });
 }

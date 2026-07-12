@@ -1,6 +1,6 @@
-import type { Storage } from '../storage/Storage.js';
+import type { TraceStorage } from '../trace/TraceStorage.js';
 
 export interface ReporterOptions {
   outputFile?: string;
-  storage?: Storage;
+  storage?: TraceStorage;
 }
